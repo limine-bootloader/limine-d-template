@@ -18,6 +18,10 @@ endef
 # It is suggested to use a custom built cross toolchain to build a kernel.
 # We are using the standard "cc" here, it may work by using
 # the host system's toolchain, but this is not guaranteed.
+override DEFAULT_CC := cc
+$(eval $(call DEFAULT_VAR,CC,$(DEFAULT_CC)))
+
+# Same thing for "d" (the D compiler).
 override DEFAULT_D := gdc
 $(eval $(call DEFAULT_VAR,D,$(DEFAULT_D)))
 
@@ -26,6 +30,14 @@ override DEFAULT_LD := ld
 $(eval $(call DEFAULT_VAR,LD,$(DEFAULT_LD)))
 
 # User controllable C flags.
+override DEFAULT_CFLAGS := -g -O2 -pipe
+$(eval $(call DEFAULT_VAR,CFLAGS,$(DEFAULT_CFLAGS)))
+
+# User controllable C preprocessor flags. We set none by default.
+override DEFAULT_CPPFLAGS :=
+$(eval $(call DEFAULT_VAR,CPPFLAGS,$(DEFAULT_CPPFLAGS)))
+
+# User controllable D flags.
 override DEFAULT_DFLAGS := -g -O2 -pipe
 $(eval $(call DEFAULT_VAR,DFLAGS,$(DEFAULT_DFLAGS)))
 
@@ -38,6 +50,31 @@ override DEFAULT_LDFLAGS :=
 $(eval $(call DEFAULT_VAR,LDFLAGS,$(DEFAULT_LDFLAGS)))
 
 # Internal C flags that should not be changed by the user.
+override CFLAGS += \
+    -Wall \
+    -Wextra \
+    -std=gnu11 \
+    -ffreestanding \
+    -fno-stack-protector \
+    -fno-stack-check \
+    -fno-lto \
+    -fPIE \
+    -m64 \
+    -march=x86-64 \
+    -mno-80387 \
+    -mno-mmx \
+    -mno-sse \
+    -mno-sse2 \
+    -mno-red-zone
+
+# Internal C preprocessor flags that should not be changed by the user.
+override CPPFLAGS := \
+    -I. \
+    $(CPPFLAGS) \
+    -MMD \
+    -MP
+
+# Internal D flags that should not be changed by the user.
 override DFLAGS += \
     -Wall \
     -Wextra \
@@ -71,16 +108,21 @@ override NASMFLAGS += \
     -Wall \
     -f elf64
 
-# Use "find" to glob all *.d, *.S, and *.asm files in the tree and obtain the
-# object file names.
+# Use "find" to glob all *.c, *.d, *.S, and *.asm files in the tree and obtain the
+# object and header dependency file names.
+override CFILES := $(shell find -L . -type f -name '*.c')
 override DFILES := $(shell find -L . -type f -name '*.d' | grep -v 'limine.d') limine.d
 override ASFILES := $(shell find -L . -type f -name '*.S')
 override NASMFILES := $(shell find -L . -type f -name '*.asm')
-override OBJ := $(DFILES:.d=.d.o) $(ASFILES:.S=.S.o) $(NASMFILES:.asm=.asm.o)
+override OBJ := $(CFILES:.c=.c.o) $(DFILES:.d=.d.o) $(ASFILES:.S=.S.o) $(NASMFILES:.asm=.asm.o)
+override HEADER_DEPS := $(CFILES:.c=.c.d) $(ASFILES:.S=.S.d)
 
 # Default target.
 .PHONY: all
 all: $(KERNEL)
+
+limine.h:
+	curl -Lo $@ https://github.com/limine-bootloader/limine/raw/trunk/limine.h
 
 limine.d:
 	curl -Lo $@ https://github.com/limine-bootloader/limine-d/raw/trunk/limine.d
@@ -89,13 +131,20 @@ limine.d:
 $(KERNEL): GNUmakefile linker.ld $(OBJ)
 	$(LD) $(OBJ) $(LDFLAGS) -o $@
 
+# Include header dependencies.
+-include $(HEADER_DEPS)
+
+# Compilation rules for *.c files.
+%.c.o: %.c GNUmakefile limine.h
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
+
 # Compilation rules for *.d files.
 %.d.o: %.d GNUmakefile limine.d
 	$(D) $(DFLAGS) -c $< -o $@
 
 # Compilation rules for *.S files.
-%.S.o: %.S GNUmakefile
-	$(D) $(DFLAGS) -c $< -o $@
+%.S.o: %.S GNUmakefile limine.h
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
 
 # Compilation rules for *.asm (nasm) files.
 %.asm.o: %.asm GNUmakefile
@@ -104,8 +153,8 @@ $(KERNEL): GNUmakefile linker.ld $(OBJ)
 # Remove object files and the final executable.
 .PHONY: clean
 clean:
-	rm -rf $(KERNEL) $(OBJ)
+	rm -rf $(KERNEL) $(OBJ) $(HEADER_DEPS)
 
 .PHONY: distclean
 distclean: clean
-	rm -rf limine.d
+	rm -f limine.h limine.d

@@ -1,3 +1,5 @@
+/limine.h
 /limine.d
 *.elf
 *.o
+*.c.d
