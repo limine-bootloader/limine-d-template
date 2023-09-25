@@ -111,7 +111,7 @@ override NASMFLAGS += \
 # Use "find" to glob all *.c, *.d, *.S, and *.asm files in the tree and obtain the
 # object and header dependency file names.
 override CFILES := $(shell find -L . -type f -name '*.c')
-override DFILES := $(shell find -L . -type f -name '*.d' | grep -v 'limine.d') limine.d
+override DFILES := $(shell find -L . -type f -name '*.d' | grep -v '.c.d' | grep -v '.S.d' | grep -v 'limine.d') limine.d
 override ASFILES := $(shell find -L . -type f -name '*.S')
 override NASMFILES := $(shell find -L . -type f -name '*.asm')
 override OBJ := $(CFILES:.c=.c.o) $(DFILES:.d=.d.o) $(ASFILES:.S=.S.o) $(NASMFILES:.asm=.asm.o)
