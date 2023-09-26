@@ -1,4 +1,4 @@
-import limine;
+static import limine;
 
 __gshared limine.FramebufferRequest framebufferReq = {
     id: mixin(limine.FramebufferRequestID!()),
