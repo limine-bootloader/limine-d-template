@@ -1,5 +1,5 @@
-/limine.h
-/limine.d
+/src/limine.h
+/src/limine.d
 *.elf
 *.o
 *.c.d
