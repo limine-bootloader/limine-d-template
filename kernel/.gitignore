@@ -1,5 +1,4 @@
 /src/limine.h
 /src/limine.d
+/bin
 /obj
-*.elf
-*.o

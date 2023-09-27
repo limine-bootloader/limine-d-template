@@ -3,7 +3,7 @@ override MAKEFLAGS += -rR
 
 # This is the name that our final kernel executable will have.
 # Change as needed.
-override KERNEL := kernel.elf
+override KERNEL := bin/kernel
 
 # Convenience macro to reliably declare user overridable variables.
 define DEFAULT_VAR =
@@ -130,6 +130,7 @@ src/limine.d:
 
 # Link rules for the final kernel executable.
 $(KERNEL): GNUmakefile linker.ld $(OBJ)
+	mkdir -p "$$(dirname $@)"
 	$(LD) $(OBJ) $(LDFLAGS) -o $@
 
 # Include header dependencies.
@@ -158,7 +159,7 @@ obj/%.asm.o: src/%.asm GNUmakefile
 # Remove object files and the final executable.
 .PHONY: clean
 clean:
-	rm -rf $(KERNEL) obj
+	rm -rf bin obj
 
 .PHONY: distclean
 distclean: clean
