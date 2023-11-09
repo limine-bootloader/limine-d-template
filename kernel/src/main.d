@@ -1,5 +1,7 @@
 static import limine;
 
+mixin(limine.BaseRevision!("1"));
+
 __gshared limine.FramebufferRequest framebufferReq = {
     id: mixin(limine.FramebufferRequestID!()),
     revision: 0
@@ -13,6 +15,10 @@ private void hcf() {
 }
 
 extern (C) void _start() {
+    if (mixin(limine.BaseRevisionSupported!()) == false) {
+        hcf();
+    }
+
     if (framebufferReq.response == null
      || framebufferReq.response.framebufferCount < 1) {
         hcf();
